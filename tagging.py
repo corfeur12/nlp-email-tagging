@@ -1,6 +1,7 @@
 from os import listdir, makedirs
 from os.path import isfile, join, exists
 import re
+import sys
 
 
 def tag_text(all_text, text_to_tag, tag_name):
@@ -20,10 +21,18 @@ def tag_text(all_text, text_to_tag, tag_name):
     return re.sub(search_expression, substitution_text, all_text, flags=re.IGNORECASE)
 
 
-untagged_text_files_path = 'untagged/'
-output_files_path = 'tagged'
+# check that the input arguments exist
+if len(sys.argv) != 3:
+    print('usage: ' + sys.argv[0] + " input_files_directory output_files_directory")
+    sys.exit(2)
+# set up the file paths
+untagged_text_files_path = sys.argv[1]
+output_files_path = sys.argv[2]
+# check if the output directory exists
+# if not then creates it
 if not exists(output_files_path):
     makedirs(output_files_path)
+# gets the untagged files
 untagged_text_files_list = [f for f in listdir(untagged_text_files_path) if isfile(join(untagged_text_files_path, f))]
 
 for untagged_text_file_name in untagged_text_files_list:
