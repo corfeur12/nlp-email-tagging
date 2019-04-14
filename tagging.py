@@ -21,6 +21,46 @@ def tag_text(all_text, text_to_tag, tag_name):
     return re.sub(search_expression, substitution_text, all_text, flags=re.IGNORECASE)
 
 
+def tag_paragraphs(text):
+    output = text
+    text_to_process = remove_email_text(output)
+    # finds a new line followed by any letter then any characters then punctuation
+    # positive lookahead for 2 new lines or the end of the document
+    search_expression = r'''(?:^|\n)(?:\t?)(\w(?:.|\n{1})+?[.!?'"]+?)(?=\s*\n{2,}|\s*\n?$)'''
+    # output = re.sub(search_expression, r'<paragraph>' + r'\1' + r'</paragraph>', text)
+    all_paragraphs = re.findall(search_expression, text_to_process)
+    for each in all_paragraphs:
+        output = tag_text(output, each, 'paragraph')
+    return output
+
+
+def remove_single_new_lines(text):
+    output = re.sub(r'(?:^|[^\n])(\n)(?!\n)', " ", text)
+    return output
+
+
+def remove_email_text(text):
+    # captures anything on a new line surrounded by < and > or any word followed by a :
+    text = re.sub(r'(?:\n|^)((?:<.*>)|(?:[^\S\n]*\w+:.*))', "", text)
+    # removes lines with no text but some symbols
+    text = re.sub(r'(?:^|\n)([^\w\d\n]+)(?:$|\n)', "", text)
+    # removes lines with lots of whitespace before text
+    text = re.sub(r'(?:^)(?!\t\w)([^\S\n]{2,}[\w\d\t \r]+.*)(?:$)', "", text, flags=re.MULTILINE)
+    # removes lines with lots of whitespace in the middle
+    text = re.sub(r'(?:^|\n)(\w.+?[^\S\n]{6,}.+?\w)(?:$|\n)', "", text)
+    # removes lines starting with a time
+    text = re.sub(r'(?:^|\n)(\s+\d{1,2}(?:(?:[.:]{1}\d{2})|(?:\s?p\.?m\.?|\s?a\.?m\.?)){1,2}.*)(?:$|\n)', "", text)
+    # removes lines starting with a day
+    text = re.sub(r'(?:^|\n)(\s*(?:monday|tuesday|wednesday|thursday|friday|saturday|sunday|mon|tues|wed|thurs|fri|sat|sun).*)(?:$|\n)', "", text, flags=re.IGNORECASE)
+    # removes lines that are in all caps
+    text = re.sub(r'(?:^|\n)([\sA-Z\d:.,()[\]{}/\\!?\-"\'`]+)(?:$|\n)', "", text)
+    # removes lines that end in the word seminar
+    output = re.sub(r'(?:^|\n)(.*Seminar)(?:$|\n)', "", text)
+    # removes leading/trailing whitespace
+    output = output.strip()
+    return output
+
+
 # check that the input arguments exist
 if len(sys.argv) != 3:
     print('usage: ' + sys.argv[0] + " input_files_directory output_files_directory")
@@ -28,18 +68,26 @@ if len(sys.argv) != 3:
 # set up the file paths
 untagged_text_files_path = sys.argv[1]
 output_files_path = sys.argv[2]
+if output_files_path[-1] != '/':
+    output_files_path += '/'
 # check if the output directory exists
 # if not then creates it
 if not exists(output_files_path):
     makedirs(output_files_path)
 # gets the untagged files
 untagged_text_files_list = [f for f in listdir(untagged_text_files_path) if isfile(join(untagged_text_files_path, f))]
-
+# iterate over all files
 for untagged_text_file_name in untagged_text_files_list:
+    # set up file
     path_to_read = join(untagged_text_files_path, untagged_text_file_name)
-    file_to_read = open(path_to_read, 'r')
     print(untagged_text_file_name)
+    # an open and shut case
+    file_to_read = open(path_to_read, 'r')
     untagged_text_file_text = file_to_read.read()
     file_to_read.close()
-    tagged_text_file_text = tag_text(untagged_text_file_text, 'topic', 'sampleTag')
-    print(tagged_text_file_text)
+    # data processing
+    tagged_text_file_text = tag_paragraphs(untagged_text_file_text)
+    # save data
+    with open(output_files_path + untagged_text_file_name, "w+") as text_file:
+        text_file.write(tagged_text_file_text)
+
