@@ -58,6 +58,29 @@ def remove_single_new_lines(text):
     return output
 
 
+def tag_times(text):
+    output = text
+    # look for lines
+    search_expression = r'(?:\s*times?:\s*)(.+?)(?:\s)*(?:\n|$)'
+    times_list = re.findall(search_expression, text, flags=re.IGNORECASE)
+    if len(times_list) == 0:
+        # TODO maybe scan paragraph tags
+        # maybe don't worry as none of these has this issues
+        # apart from 485.txt which is an empty file check
+        # has to do something
+        print(":(")
+    else:
+        for times in times_list:
+            # TODO times -> 24 hour, compare times, check if 2 unique times exist, if yes tag, else ???
+            extracted_times = extract_times(times)
+    return output
+
+
+def extract_times(text):
+    search_expression = r'(?:\s|-)+(' + TIME_REGEX + r')(?:\b|\n|\r|\s)'
+    return re.findall(search_expression, text, re.IGNORECASE)
+
+
 def remove_email_text(text):
     # remove lines surrounded by < and > or any word followed by a :
     search_expression = r'(?:\n|^)((?:<.*>)|(?:[^\S\n]*\w+:.*))'
@@ -72,8 +95,8 @@ def remove_email_text(text):
     search_expression = r'(?:^|\n)(\w.+?[^\S\n]{6,}.+?\w)(?:$|\n)'
     text = re.sub(search_expression, "", text)
     # remove lines starting with a time
-    search_expression = r'(?:^|\n)(\s+\d{1,2}(?:(?:[.:]{1}\d{2})|(?:\s?p\.?m\.?|\s?a\.?m\.?)){1,2}.*)(?:$|\n)'
-    text = re.sub(search_expression, "", text)
+    search_expression = r'(?:^|\n)(\s+' + TIME_REGEX + r'.*)(?:$|\n)'
+    text = re.sub(search_expression, "", text, re.IGNORECASE)
     # remove lines starting with a day (not case sensitive)
     days_list = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday']
     # includes 3 letter variations
@@ -92,6 +115,10 @@ def remove_email_text(text):
     output = output.strip()
     return output
 
+
+# TODO: check if global variable is /really/ necessary
+# maybe make all regexps global? needs some consistency
+TIME_REGEX = r'[0-2]?\d(?:(?:[.:]{1}[0-5]\d\s?(?:a|p)\.?m\.?)|(?:[.:]{1}[0-5]\d|\s?(?:a|p)\.?m\.?))'
 
 # check if input arguments exist
 if len(sys.argv) != 3:
@@ -120,6 +147,7 @@ for untagged_text_file_name in untagged_text_files_list:
     # data processing
     tagged_text_file_text = tag_paragraphs(untagged_text_file_text)
     tagged_text_file_text = tag_sentences(tagged_text_file_text)
+    tagged_text_file_text = tag_times(tagged_text_file_text)
     # save data
     with open(output_files_path + untagged_text_file_name, "w+") as text_file:
         text_file.write(tagged_text_file_text)
