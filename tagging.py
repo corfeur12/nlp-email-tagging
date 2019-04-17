@@ -24,28 +24,34 @@ def tag_text(all_text, text_to_tag, tag_name):
 
 def tag_paragraphs(text):
     output = text
+    # prevents over tagging of unnecessary information
     text_to_process = remove_email_text(output)
     # finds a new line followed by any letter then any characters then punctuation
     # positive lookahead for 2 new lines or the end of the document
     search_expression = r'''(?:^|\n)(?:\t?)(\w(?:.|\n{1})+?[.!?'"]+?)(?=\s*\n{2,}|\s*\n?$)'''
-    # output = re.sub(search_expression, r'<paragraph>' + r'\1' + r'</paragraph>', text)
     all_paragraphs = re.findall(search_expression, text_to_process)
     for each in all_paragraphs:
+        # tags each paragraph
         output = tag_text(output, each, 'paragraph')
     return output
 
 
 def tag_sentences(text):
     output = text
+    # only tags within paragraphs
     paragraphs = re.findall(r'(?:<paragraph>)((?:.|\n)*?)(?:<\/paragraph>)', text)
+    # iterate over paragraph text
     for p in paragraphs:
+        # tokenize the sentences
         sentences = sent_tokenize(p)
         for s in sentences:
+            # tag each sentence
             output = tag_text(output, s, 'sentence')
     return output
 
 
 def remove_single_new_lines(text):
+    # negative lookahead and lookbehind for \n
     output = re.sub(r'(?:^|[^\n])(\n)(?!\n)', " ", text)
     return output
 
@@ -61,14 +67,16 @@ def remove_email_text(text):
     text = re.sub(r'(?:^|\n)(\w.+?[^\S\n]{6,}.+?\w)(?:$|\n)', "", text)
     # removes lines starting with a time
     text = re.sub(r'(?:^|\n)(\s+\d{1,2}(?:(?:[.:]{1}\d{2})|(?:\s?p\.?m\.?|\s?a\.?m\.?)){1,2}.*)(?:$|\n)', "", text)
-    # removes lines starting with a day
+    # removes lines starting with a day (not case sensitive)
     days_list = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday']
+    # includes 3 letter variations
+    # e.g. sun (rather than Sunday
     days_string = '|'.join(day + "|" + day[:3] for day in days_list)
     text = re.sub(r'(?:^|\n)(\s*(?:' + days_string + r').*)(?:$|\n)', "", text, flags=re.IGNORECASE)
     # removes lines that are in all caps
     text = re.sub(r'(?:^|\n)([\sA-Z\d:.,()[\]{}/\\!?\-"\'`]+)(?:$|\n)', "", text)
     # removes lines that end in the word seminar
-    output = re.sub(r'(?:^|\n)(.*Seminar)(?:$|\n)', "", text)
+    output = re.sub(r'(?:^|\n)(.*seminar)(?:$|\n)', "", text, flags=re.IGNORECASE)
     # removes leading/trailing whitespace
     output = output.strip()
     return output
