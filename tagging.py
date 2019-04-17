@@ -40,7 +40,7 @@ def remove_single_new_lines(text):
 
 
 def remove_email_text(text):
-    # captures anything on a new line surrounded by < and > or any word followed by a :
+    # removes lines surrounded by < and > or any word followed by a :
     text = re.sub(r'(?:\n|^)((?:<.*>)|(?:[^\S\n]*\w+:.*))', "", text)
     # removes lines with no text but some symbols
     text = re.sub(r'(?:^|\n)([^\w\d\n]+)(?:$|\n)', "", text)
@@ -51,7 +51,9 @@ def remove_email_text(text):
     # removes lines starting with a time
     text = re.sub(r'(?:^|\n)(\s+\d{1,2}(?:(?:[.:]{1}\d{2})|(?:\s?p\.?m\.?|\s?a\.?m\.?)){1,2}.*)(?:$|\n)', "", text)
     # removes lines starting with a day
-    text = re.sub(r'(?:^|\n)(\s*(?:monday|tuesday|wednesday|thursday|friday|saturday|sunday|mon|tues|wed|thurs|fri|sat|sun).*)(?:$|\n)', "", text, flags=re.IGNORECASE)
+    days_list = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday']
+    days_string = '|'.join(day + "|" + day[:3] for day in days_list)
+    text = re.sub(r'(?:^|\n)(\s*(?:' + days_string + r').*)(?:$|\n)', "", text, flags=re.IGNORECASE)
     # removes lines that are in all caps
     text = re.sub(r'(?:^|\n)([\sA-Z\d:.,()[\]{}/\\!?\-"\'`]+)(?:$|\n)', "", text)
     # removes lines that end in the word seminar
