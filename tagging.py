@@ -2,6 +2,7 @@ from os import listdir, makedirs
 from os.path import isfile, join, exists
 import re
 import sys
+from nltk.tokenize import sent_tokenize
 
 
 def tag_text(all_text, text_to_tag, tag_name):
@@ -31,6 +32,16 @@ def tag_paragraphs(text):
     all_paragraphs = re.findall(search_expression, text_to_process)
     for each in all_paragraphs:
         output = tag_text(output, each, 'paragraph')
+    return output
+
+
+def tag_sentences(text):
+    output = text
+    paragraphs = re.findall(r'(?:<paragraph>)((?:.|\n)*?)(?:<\/paragraph>)', text)
+    for p in paragraphs:
+        sentences = sent_tokenize(p)
+        for s in sentences:
+            output = tag_text(output, s, 'sentence')
     return output
 
 
@@ -89,7 +100,7 @@ for untagged_text_file_name in untagged_text_files_list:
     file_to_read.close()
     # data processing
     tagged_text_file_text = tag_paragraphs(untagged_text_file_text)
+    tagged_text_file_text = tag_sentences(tagged_text_file_text)
     # save data
     with open(output_files_path + untagged_text_file_name, "w+") as text_file:
         text_file.write(tagged_text_file_text)
-
