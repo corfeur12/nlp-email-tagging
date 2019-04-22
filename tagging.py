@@ -60,25 +60,75 @@ def remove_single_new_lines(text):
 
 def tag_times(text):
     output = text
-    # look for lines
+    # look for lines containing the 'time:' (with/without an s)
     search_expression = r'(?:\s*times?:\s*)(.+?)(?:\s)*(?:\n|$)'
-    times_list = re.findall(search_expression, text, flags=re.IGNORECASE)
-    if len(times_list) == 0:
+    times_set_initial = set(re.findall(search_expression, text, flags=re.IGNORECASE))
+    times_set_extracted = set()
+    if len(times_set_initial) == 0:
         # TODO maybe scan paragraph tags
         # maybe don't worry as none of these has this issues
         # apart from 485.txt which is an empty file check
         # has to do something
         print(":(")
     else:
-        for times in times_list:
+        # set so as to not have duplicates
+        times_24_hour = set()
+        for times in times_set_initial:
             # TODO times -> 24 hour, compare times, check if 2 unique times exist, if yes tag, else ???
             extracted_times = extract_times(times)
+            for time in extracted_times:
+                times_set_extracted.add(time)
+                times_24_hour.add(time_to_24_hour_format(time))
+        print(times_set_initial)
+        print(times_set_extracted)
+        print(times_24_hour)
+        # if only 2 times exist then assume they have to be the start and end times
+        if len(times_24_hour) == 2:
+            time_first = times_24_hour.pop()
+            time_second = times_24_hour.pop()
+            # check which time is earlier
+            # swaps if necessary
+            if time_first[0] > time_second[0]:
+                time_first, time_second = time_second, time_first
+            elif time_first[0] == time_second[0] and time_first[1] > time_second[1]:
+                time_first, time_second = time_second, time_first
+            # tags the text
+            output = tag_equivalent_times(output, time_first, times_set_extracted, 'stime')
+            output = tag_equivalent_times(output, time_second, times_set_extracted, 'etime')
+    return output
+
+
+def tag_equivalent_times(text, time, times_set, tag_name):
+    output = text
+    times_sorted = list(times_set)
+    # sorted by longest to shortest
+    # prevents partial tagging for sort of repeats
+    # e.g. prevents '<stime>5:00</stime> P.M.' if 5:00 came first in the set
+    # should be '<stime>5:00 P.M.</stime>'
+    times_sorted.sort(key=len, reverse=True)
+    for check_time in times_sorted:
+        if time == time_to_24_hour_format(check_time):
+            output = tag_text(output, check_time, tag_name)
     return output
 
 
 def extract_times(text):
-    search_expression = r'(?:\s|-)+(' + TIME_REGEX + r')(?:\b|\n|\r|\s)'
+    search_expression = r'(?:^|\s|-)+(' + TIME_REGEX + r')(?:\b|\n|\r|\s)'
     return re.findall(search_expression, text, re.IGNORECASE)
+
+
+def time_to_24_hour_format(time):
+    partial_time = time
+    hour = int(re.findall(r'(?:^|\s)\d+', partial_time)[0])
+    partial_time = re.sub(r'(?:^|\s)\d+', '', partial_time)
+    try:
+        minute = int(re.findall(r'\d+', partial_time)[0])
+    except (TypeError, IndexError):
+        minute = 0
+    if len(re.findall(r'(p\.?m\.?)', partial_time, re.IGNORECASE)) != 0:
+        hour = int(hour) + 12
+    time_tuple = (hour, minute)
+    return time_tuple
 
 
 def remove_email_text(text):
